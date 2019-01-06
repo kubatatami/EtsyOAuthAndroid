@@ -11,7 +11,7 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
-import io.reactivex.subjects.PublishSubject
+import io.reactivex.subjects.BehaviorSubject
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -30,7 +30,7 @@ object EtsyOAuth {
     var oauthTokenSecret: String? = null
         private set
 
-    private val loginSubject = PublishSubject.create<Boolean>()
+    private val loginSubject = BehaviorSubject.createDefault(false)
     val loginObservable: Observable<Boolean> = loginSubject.observeOn(AndroidSchedulers.mainThread())
 
     @JvmStatic
