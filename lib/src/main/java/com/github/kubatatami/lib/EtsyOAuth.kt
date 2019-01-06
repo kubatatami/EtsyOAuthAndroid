@@ -30,15 +30,21 @@ object EtsyOAuth {
     var oauthTokenSecret: String? = null
         private set
 
-    private val logoutSubject = PublishSubject.create<Unit>()
-    val logoutObservable: Observable<Unit> = logoutSubject.observeOn(AndroidSchedulers.mainThread())
+    private val loginSubject = PublishSubject.create<Boolean>()
+    val loginObservable: Observable<Boolean> = loginSubject.observeOn(AndroidSchedulers.mainThread())
 
     @JvmStatic
     val interceptor: Interceptor = Interceptor {
         val builder = it.request().newBuilder()
-        if (isLogged()) builder.addHeader("Authorization", "OAuth ${oAuthHelper.createHeader(oauthToken!!, oauthTokenSecret!!)}")
+        if (isLogged()) builder.addHeader(
+            "Authorization",
+            "OAuth ${oAuthHelper.createHeader(oauthToken!!, oauthTokenSecret!!)}"
+        )
         val result = it.proceed(builder.build())
-        if (result.code() == 403) logoutSubject.onNext(Unit)
+        if (result.code() == 403) {
+            loginSubject.onNext(false)
+            logout()
+        }
         return@Interceptor result
     }
 
@@ -50,9 +56,9 @@ object EtsyOAuth {
 
     @JvmStatic
     fun login(activity: Activity): Completable {
-        return Single.fromCallable {  oAuthHelper.requestToken(REQUEST_TOKEN_URL + LoginWebView.getCallbackUrl(activity)) }
+        return Single.fromCallable { oAuthHelper.requestToken(REQUEST_TOKEN_URL + LoginWebView.getCallbackUrl(activity)) }
             .flatMap { okHttpClient.rxEnqueue(it) }
-            .flatMap {response ->
+            .flatMap { response ->
                 val uri = Uri.parse("?" + response.body()!!.string())
                 val url = URLDecoder.decode(uri.getQueryParameter("login_url"), "utf-8")
                 val oauthToken = URLDecoder.decode(uri.getQueryParameter("oauth_token"), "utf-8")
@@ -60,7 +66,11 @@ object EtsyOAuth {
                 RxLoginWebView.open(activity, url)
                     .flatMap {
                         val accessTokenRequest =
-                            oAuthHelper.accessToken(ACCCESS_TOKEN_URL + it["oauth_verifier"], oauthToken, oauthTokenSecret)
+                            oAuthHelper.accessToken(
+                                ACCCESS_TOKEN_URL + it["oauth_verifier"],
+                                oauthToken,
+                                oauthTokenSecret
+                            )
                         okHttpClient.rxEnqueue(accessTokenRequest)
                     }
             }
@@ -68,6 +78,7 @@ object EtsyOAuth {
                 val uri = Uri.parse("?" + response.body()!!.string())
                 oauthToken = URLDecoder.decode(uri.getQueryParameter("oauth_token"), "utf-8")
                 oauthTokenSecret = URLDecoder.decode(uri.getQueryParameter("oauth_token_secret"), "utf-8")
+                loginSubject.onNext(true)
             }
             .ignoreElement()
     }
@@ -76,6 +87,7 @@ object EtsyOAuth {
     fun setCredentials(oauthToken: String, oauthTokenSecret: String) {
         this.oauthToken = oauthToken
         this.oauthTokenSecret = oauthTokenSecret
+        loginSubject.onNext(true)
     }
 
     @JvmStatic
