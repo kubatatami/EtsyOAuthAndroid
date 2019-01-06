@@ -25,8 +25,10 @@ object EtsyOAuth {
         "https://openapi.etsy.com/v2/oauth/request_token?scope=email_r&oauth_callback="
     private val okHttpClient = OkHttpClient.Builder().build()
     private lateinit var oAuthHelper: OAuth1Helper
-    private var oauthToken: String? = null
-    private var oauthTokenSecret: String? = null
+    var oauthToken: String? = null
+        private set
+    var oauthTokenSecret: String? = null
+        private set
 
     private val logoutSubject = PublishSubject.create<Unit>()
     val logoutObservable: Observable<Unit> = logoutSubject.observeOn(AndroidSchedulers.mainThread())
@@ -68,6 +70,12 @@ object EtsyOAuth {
                 oauthTokenSecret = URLDecoder.decode(uri.getQueryParameter("oauth_token_secret"), "utf-8")
             }
             .ignoreElement()
+    }
+
+    @JvmStatic
+    fun setCredentials(oauthToken: String, oauthTokenSecret: String) {
+        this.oauthToken = oauthToken
+        this.oauthTokenSecret = oauthTokenSecret
     }
 
     @JvmStatic
