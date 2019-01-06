@@ -21,8 +21,7 @@ import java.net.URLDecoder
 object EtsyOAuth {
 
     private const val ACCCESS_TOKEN_URL = "https://openapi.etsy.com/v2/oauth/access_token?oauth_verifier="
-    private const val REQUEST_TOKEN_URL =
-        "https://openapi.etsy.com/v2/oauth/request_token?scope=email_r&oauth_callback="
+    private const val REQUEST_TOKEN_URL = "https://openapi.etsy.com/v2/oauth/request_token"
     private val okHttpClient = OkHttpClient.Builder().build()
     private lateinit var oAuthHelper: OAuth1Helper
     var oauthToken: String? = null
@@ -55,8 +54,11 @@ object EtsyOAuth {
     }
 
     @JvmStatic
-    fun login(activity: Activity): Completable {
-        return Single.fromCallable { oAuthHelper.requestToken(REQUEST_TOKEN_URL + LoginWebView.getCallbackUrl(activity)) }
+    fun login(activity: Activity, vararg scope: String): Completable {
+        return Single.fromCallable {
+            oAuthHelper.requestToken(REQUEST_TOKEN_URL +
+                    "?scope={${scope.joinToString(",")}}&oauth_callback=${LoginWebView.getCallbackUrl(activity)}")
+        }
             .flatMap { okHttpClient.rxEnqueue(it) }
             .flatMap { response ->
                 val uri = Uri.parse("?" + response.body()!!.string())

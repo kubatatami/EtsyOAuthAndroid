@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
                 }, Throwable::printStackTrace)
         }
         login.setOnClickListener {
-            EtsyOAuth.login(this).subscribe({}, Throwable::printStackTrace)
+            EtsyOAuth.login(this, "email_r").subscribe({}, Throwable::printStackTrace)
         }
     }
 }
