@@ -57,7 +57,7 @@ object EtsyOAuth {
     fun login(activity: Activity, vararg scope: String): Completable {
         return Single.fromCallable {
             oAuthHelper.requestToken(REQUEST_TOKEN_URL +
-                    "?scope={${scope.joinToString(",")}}&oauth_callback=${LoginWebView.getCallbackUrl(activity)}")
+                    "?scope=${scope.joinToString(",")}&oauth_callback=${LoginWebView.getCallbackUrl(activity)}")
         }
             .flatMap { okHttpClient.rxEnqueue(it) }
             .flatMap { response ->
