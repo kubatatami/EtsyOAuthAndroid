@@ -7,7 +7,8 @@ class ExampleApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        EtsyOAuth.initialize(this, CONSUMER_KEY, CONSUMER_SECRET)
+        EtsyOAuth.initialize(this)
+        EtsyOAuth.setConsumerCredentials(CONSUMER_KEY, CONSUMER_SECRET)
     }
 
     companion object {

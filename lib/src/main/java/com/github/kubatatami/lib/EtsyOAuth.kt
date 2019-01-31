@@ -48,8 +48,12 @@ object EtsyOAuth {
     }
 
     @JvmStatic
-    fun initialize(app: Application, consumerKey: String, consumerSecret: String) {
+    fun initialize(app: Application) {
         RxLoginWebView.initialization(app)
+    }
+
+    @JvmStatic
+    fun setConsumerCredentials(consumerKey: String, consumerSecret: String) {
         oAuthHelper = OAuth1Helper(consumerKey, consumerSecret)
     }
 
