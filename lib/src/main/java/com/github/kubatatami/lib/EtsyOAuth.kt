@@ -12,10 +12,8 @@ import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import okhttp3.*
+import java.io.IOException
 import java.net.URLDecoder
 
 object EtsyOAuth {
@@ -60,8 +58,10 @@ object EtsyOAuth {
     @JvmStatic
     fun login(activity: Activity, vararg scope: String): Completable {
         return Single.fromCallable {
-            oAuthHelper.requestToken(REQUEST_TOKEN_URL +
-                    "?scope=${scope.joinToString("%20")}&oauth_callback=${LoginWebView.getCallbackUrl(activity)}")
+            oAuthHelper.requestToken(
+                REQUEST_TOKEN_URL +
+                        "?scope=${scope.joinToString("%20")}&oauth_callback=${LoginWebView.getCallbackUrl(activity)}"
+            )
         }
             .flatMap { okHttpClient.rxEnqueue(it) }
             .flatMap { response ->
@@ -107,11 +107,18 @@ object EtsyOAuth {
 }
 
 private fun OkHttpClient.rxEnqueue(request: Request): Single<Response> {
-    return Single.fromCallable { newCall(request).execute() }
-        .flatMap {
-            if (it.isSuccessful) Single.just(it)
-            else Single.error(Exception(it.code().toString()))
-        }
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
+    return Single.create<Response> { emitter ->
+        val call = newCall(request)
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                emitter.tryOnError(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) emitter.onSuccess(response)
+                else emitter.tryOnError(Exception(response.code().toString()))
+            }
+        })
+        return@create emitter.setCancellable { call.cancel() }
+    }.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread())
 }
